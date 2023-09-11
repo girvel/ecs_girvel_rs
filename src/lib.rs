@@ -50,10 +50,10 @@ mod tests {
     fn it_works() {
         let e = Example {
             Name: Name {name: "John Doe".to_string()},
-            Position: Position {x: 1, y: -1}
+            Position: Position {x: 1, y: -1},
         };
 
         println!("{:?}", e.get::<Name>());
-        assert_eq!(*e.get::<Name>(), e.Name);
+        assert_eq!(e.get::<Name>().name, "John Doe");
     }
 }
