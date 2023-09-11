@@ -55,5 +55,11 @@ mod tests {
 
         println!("{:?}", e.get::<Name>());
         assert_eq!(e.get::<Name>().name, "John Doe");
+
+        fn name_system<S>(subject: S) where S: Entity + Component<Name> {
+            println!("{}", subject.get::<Name>().name)
+        }
+
+        name_system(e);
     }
 }
