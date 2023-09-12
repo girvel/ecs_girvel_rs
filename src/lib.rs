@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 #[derive(PartialEq, Eq, Debug)]
 struct Name {
     name: String,
@@ -17,6 +19,12 @@ trait Entity {
     fn get<T>(&self) -> &T where Self: Component<T>;
 }
 
+impl<E: ?Sized> Entity for E {
+    fn get<T>(&self) -> &T where Self: Component<T> {
+        Component::<T>::get_component(self)
+    }
+}
+
 // macro_rules!
 
 macro_rules! entity {
@@ -31,16 +39,35 @@ macro_rules! entity {
                 &self.$component
             }
         })*
-
-        impl Entity for $name {
-            fn get<T>(&self) -> &T where Self: Component<T> {
-                Component::<T>::get_component(self)
-            }
-        }
     };
 }
 
 entity!(Example: Name, Position);
+
+struct NameSystem {
+    subjects: Vec<Rc<dyn Component<Name>>>,
+}
+
+impl Default for NameSystem {
+    fn default() -> Self {
+        Self {
+            subjects: vec![],
+        }
+    }
+}
+
+impl NameSystem {
+    // TODO maybe remove dynamic dispatch futher down the line?
+    fn raise<S>(subject: Rc<S>) where S: Component<Name> + ?Sized {
+        println!("{}", (*subject).get::<Name>().name)
+    }
+
+    fn update(&self) {
+        for subject in &self.subjects {
+            Self::raise(subject.clone())
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -56,10 +83,8 @@ mod tests {
         println!("{:?}", e.get::<Name>());
         assert_eq!(e.get::<Name>().name, "John Doe");
 
-        fn name_system<S>(subject: S) where S: Entity + Component<Name> {
-            println!("{}", subject.get::<Name>().name)
-        }
-
-        name_system(e);
+        let mut name_system = NameSystem::default();
+        name_system.subjects.push(Rc::new(e));
+        name_system.update()
     }
 }
