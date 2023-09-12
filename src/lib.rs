@@ -12,15 +12,15 @@ struct Position {
 }
 
 trait Component<T> {
-    fn get_component(&self) -> &T;
+    fn get_component(&self) -> Rc<T>;
 }
 
 trait Entity {
-    fn get<T>(&self) -> &T where Self: Component<T>;
+    fn get<T>(&self) -> Rc<T> where Self: Component<T>;
 }
 
 impl<E: ?Sized> Entity for E {
-    fn get<T>(&self) -> &T where Self: Component<T> {
+    fn get<T>(&self) -> Rc<T> where Self: Component<T> {
         Component::<T>::get_component(self)
     }
 }
@@ -31,12 +31,12 @@ macro_rules! entity {
     ($name:ident: $($component:ident),*) => {
         #[allow(non_snake_case)]
         struct $name {
-            $( $component: $component ),*
+            $( $component: Rc<$component> ),*
         }
 
         $(impl Component<$component> for $name {
-            fn get_component(&self) -> &$component {
-                &self.$component
+            fn get_component(&self) -> Rc<$component> {
+                self.$component.clone()
             }
         })*
     };
@@ -44,8 +44,19 @@ macro_rules! entity {
 
 entity!(Example: Name, Position);
 
+
+entity!(NameSystemSubject: Name);
+
+impl NameSystemSubject {
+    fn from<T>(entity: T) -> Self where T: Component<Name> {
+        Self {
+            Name: entity.get::<Name>(),
+        }
+    }
+}
+
 struct NameSystem {
-    subjects: Vec<Rc<dyn Component<Name>>>,
+    subjects: Vec<NameSystemSubject>,
 }
 
 impl Default for NameSystem {
@@ -58,8 +69,8 @@ impl Default for NameSystem {
 
 impl NameSystem {
     // TODO maybe remove dynamic dispatch futher down the line?
-    fn raise<S>(subject: Rc<S>) where S: Component<Name> + ?Sized {
-        println!("{}", (*subject).get::<Name>().name)
+    fn raise(subject: &NameSystemSubject) {
+        println!("{}", subject.get::<Name>().name)
     }
 
     fn update(&self) {
@@ -76,15 +87,15 @@ mod tests {
     #[test]
     fn it_works() {
         let e = Example {
-            Name: Name {name: "John Doe".to_string()},
-            Position: Position {x: 1, y: -1},
+            Name: Rc::new(Name {name: "John Doe".to_string()}),
+            Position: Rc::new(Position {x: 1, y: -1}),
         };
 
         println!("{:?}", e.get::<Name>());
         assert_eq!(e.get::<Name>().name, "John Doe");
 
         let mut name_system = NameSystem::default();
-        name_system.subjects.push(Rc::new(e));
+        name_system.subjects.push(NameSystemSubject::from(e));
         name_system.update()
     }
 }
