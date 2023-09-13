@@ -75,7 +75,7 @@ impl NameSystem {
 
     fn update(&self) {
         for subject in &self.subjects {
-            Self::raise(subject.clone())
+            Self::raise(subject)
         }
     }
 }
