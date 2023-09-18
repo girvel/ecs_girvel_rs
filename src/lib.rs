@@ -15,15 +15,30 @@
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, ItemStruct};
 use quote::{quote, ToTokens};
+use syn::Fields;
 
 #[proc_macro_attribute]
 pub fn entity(_: TokenStream, input: TokenStream) -> TokenStream {
     let item_struct = parse_macro_input!(input as ItemStruct);
 
     let name = &item_struct.ident;
-    let fields = &item_struct.fields;
+    let components = match &item_struct.fields {
+        Fields::Unnamed(f) => &f.unnamed,
+        _ => panic!("Expected a struct with named fields"),
+    }.iter()
+        .map(|f|);
+
+    let components: Vec<_> = fields
+        .iter()
+        .map(|f| {
+            let ident = f.ident.as_ref().unwrap();
+            quote! { #ident }
+        })
+        .collect();
 
     return quote! {
-        #item_struct
+        #item_struct;
+
+
     }.into();
 }
